@@ -92,10 +92,11 @@ class VRAMSentinel:
     def should_evict_slow_brain(self):
         """
         Determines if the Slow Brain should be evicted from GPU VRAM to System RAM.
-        Only True for Discrete GPUs with limited VRAM.
+        Only True if System RAM is significantly higher than VRAM.
         False for Unified Memory (Mac), APUs (Shared RAM), NPUs, and massive A100 GPUs.
         """
         vram = self.get_free_vram()
+        ram = self.get_free_ram()
         mac_mem = self.get_mac_unified_memory()
         npu_present = self.has_npu()
         apu_present = self.has_integrated_gpu()
@@ -105,10 +106,13 @@ class VRAMSentinel:
         if npu_present: return False
         
         if vram != "HARDWARE_NOT_NVIDIA":
-            if vram > 24000:
+            # User specifically requested: If VRAM is higher than RAM (reversed) or the same, DO NOT EVICT!
+            if vram >= ram:
+                return False
+            elif vram > 24000:
                 return False # Massive VRAM, no need to evict
             else:
-                return True # Consumer GPU. Evict to save VRAM for the Swarm!
+                return True # RAM > VRAM (e.g. 32GB RAM, 8GB VRAM). Evict to save VRAM for the Swarm!
                 
         return False
 
