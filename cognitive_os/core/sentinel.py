@@ -73,7 +73,12 @@ class VRAMSentinel:
             
         # 3. Traditional Heavy PC (NVIDIA / AMD Discrete GPUs)
         elif vram != "HARDWARE_NOT_NVIDIA":
-            if vram > 12000: return {"chunk_size": 6000, "fast_brain_swarm_size": 8}
+            if vram >= ram:
+                # INVERTED ARCHITECTURE: VRAM is huge, but System RAM is the bottleneck.
+                # Maximize chunk_size (GPU can handle massive contexts).
+                # Throttle swarm_size (Prevent Python multi-threading from crashing the tiny System RAM).
+                return {"chunk_size": 8000, "fast_brain_swarm_size": 2}
+            elif vram > 12000: return {"chunk_size": 6000, "fast_brain_swarm_size": 8}
             elif vram > 6000: return {"chunk_size": 2500, "fast_brain_swarm_size": 4}
             else: return {"chunk_size": 1000, "fast_brain_swarm_size": 2}
             
