@@ -29,7 +29,7 @@ class VRAMSentinel:
     def get_mac_unified_memory(self):
         try:
             # Reads Apple Silicon unified memory
-            out = subprocess.check_output(['sysctl', 'hw.memsize'])
+            out = subprocess.check_output(['sysctl', 'hw.memsize'], stderr=subprocess.DEVNULL)
             bytes_mem = int(out.decode().split(':')[1].strip())
             return bytes_mem // (1024 * 1024) # Return in MB
         except:
