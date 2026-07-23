@@ -17,29 +17,30 @@ class SlowBrain:
         return self.llm.generate(prompt, system=sys, use_gpu=not self.evict)
 
 class FastBrain:
-    def __init__(self, llm_provider):
+    def __init__(self, llm_provider, sentinel):
         self.llm = llm_provider
+        self.evict = sentinel.should_evict_fast_brain()
 
     def translate_math_to_code(self, chunk):
         sys = "You are the Fast Brain. Translate this specific mathematical chunk into Python code. Output ONLY the python code."
-        return self.llm.generate(chunk, system=sys)
+        return self.llm.generate(chunk, system=sys, use_gpu=not self.evict)
         
     def write_chapter(self, outline_chunk):
         sys = "You are the Fast Brain. Write a highly detailed, engaging chapter based ONLY on this outline. Output only the story prose."
-        return self.llm.generate(outline_chunk, system=sys)
+        return self.llm.generate(outline_chunk, system=sys, use_gpu=not self.evict)
 
     def extract_data(self, text):
         sys = "You are a Data Extractor. Extract the requested entities from the text into strict JSON format. Output ONLY raw JSON. No markdown."
-        return self.llm.generate(text, system=sys)
+        return self.llm.generate(text, system=sys, use_gpu=not self.evict)
 
     def translate_chunk(self, chunk):
         sys = "You are a Translator. Translate this chunk accurately. Output ONLY the translated text."
-        return self.llm.generate(chunk, system=sys)
+        return self.llm.generate(chunk, system=sys, use_gpu=not self.evict)
         
     def agentic_act(self, prompt):
         sys = "You are an Agent. You can execute local terminal commands. To run a command (like curl, grep, or python), output exactly '[COMMAND] <your bash command>'. Otherwise, output the final answer to the user."
-        return self.llm.generate(prompt, system=sys)
+        return self.llm.generate(prompt, system=sys, use_gpu=not self.evict)
         
     def chat(self, prompt):
         sys = "You are a helpful assistant. Keep it short and witty."
-        return self.llm.generate(prompt, system=sys)
+        return self.llm.generate(prompt, system=sys, use_gpu=not self.evict)

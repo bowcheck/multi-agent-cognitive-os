@@ -26,7 +26,7 @@ def main():
     
     # 2. Initialize Swarm
     slow_brain = SlowBrain(llm, sentinel)
-    fast_brain = FastBrain(llm)
+    fast_brain = FastBrain(llm, sentinel)
 
     # 3. Input Validation
     is_safe, reason = sentinel.check_input_safety(len(test_prompt))

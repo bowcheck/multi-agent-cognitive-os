@@ -73,7 +73,11 @@ class VRAMSentinel:
             
         # 3. Traditional Heavy PC (NVIDIA / AMD Discrete GPUs)
         elif vram != "HARDWARE_NOT_NVIDIA":
-            if vram >= ram:
+            if vram < 2000:
+                # VRAM is dead. Fast Brain evicted to RAM. 
+                # Swarm MUST be throttled to 1 to prevent CPU/OS death!
+                return {"chunk_size": 800, "fast_brain_swarm_size": 1}
+            elif vram >= ram:
                 # INVERTED ARCHITECTURE: VRAM is huge, but System RAM is the bottleneck.
                 # Maximize chunk_size (GPU can handle massive contexts).
                 # Throttle swarm_size (Prevent Python multi-threading from crashing the tiny System RAM).
@@ -120,6 +124,30 @@ class VRAMSentinel:
                 return True # RAM > VRAM (e.g. 32GB RAM, 8GB VRAM). Evict to save VRAM for the Swarm!
                 
         return False
+
+    def should_evict_fast_brain(self):
+        """
+        Determines if the Fast Brain MUST be evicted to System RAM.
+        This ONLY happens on Pure CPU systems, or Discrete GPUs with critically low VRAM (<2000MB)
+        where the Fast Brain physically cannot fit in the GPU.
+        """
+        vram = self.get_free_vram()
+        mac_mem = self.get_mac_unified_memory()
+        npu_present = self.has_npu()
+        apu_present = self.has_integrated_gpu()
+        
+        if mac_mem != "NOT_MAC": return False
+        if apu_present: return False
+        if npu_present: return False
+        
+        if vram != "HARDWARE_NOT_NVIDIA":
+            if vram < 2000:
+                return True # VRAM is critically low. Force Fast Brain to CPU.
+            else:
+                return False
+                
+        # Pure CPU system without GPU
+        return True
 
     def check_input_safety(self, text_length):
         ram = self.get_free_ram()
