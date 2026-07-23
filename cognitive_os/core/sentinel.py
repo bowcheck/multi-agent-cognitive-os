@@ -89,6 +89,29 @@ class VRAMSentinel:
         else:
             return {"chunk_size": 800, "fast_brain_swarm_size": 1}
 
+    def should_evict_slow_brain(self):
+        """
+        Determines if the Slow Brain should be evicted from GPU VRAM to System RAM.
+        Only True for Discrete GPUs with limited VRAM.
+        False for Unified Memory (Mac), APUs (Shared RAM), NPUs, and massive A100 GPUs.
+        """
+        vram = self.get_free_vram()
+        mac_mem = self.get_mac_unified_memory()
+        npu_present = self.has_npu()
+        apu_present = self.has_integrated_gpu()
+        
+        if mac_mem != "NOT_MAC": return False
+        if apu_present: return False
+        if npu_present: return False
+        
+        if vram != "HARDWARE_NOT_NVIDIA":
+            if vram > 24000:
+                return False # Massive VRAM, no need to evict
+            else:
+                return True # Consumer GPU. Evict to save VRAM for the Swarm!
+                
+        return False
+
     def check_input_safety(self, text_length):
         ram = self.get_free_ram()
         vram = self.get_free_vram()

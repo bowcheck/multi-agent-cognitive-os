@@ -25,7 +25,7 @@ def main():
     stitcher = TCPStitcher()
     
     # 2. Initialize Swarm
-    slow_brain = SlowBrain(llm)
+    slow_brain = SlowBrain(llm, sentinel)
     fast_brain = FastBrain(llm)
 
     # 3. Input Validation

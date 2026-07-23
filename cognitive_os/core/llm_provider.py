@@ -9,12 +9,13 @@ class LLMProvider:
         self.provider = provider
         self.model = model
 
-    def generate(self, prompt, system="You are an AI."):
+    def generate(self, prompt, system="You are an AI.", use_gpu=True):
         start = time.time()
         
         if self.provider == "ollama":
             url = 'http://localhost:11434/api/generate'
-            payload = {'model': self.model, 'system': system, 'prompt': prompt, 'stream': False, 'options': {'num_ctx': 16384}}
+            num_gpu = 99 if use_gpu else 0
+            payload = {'model': self.model, 'system': system, 'prompt': prompt, 'stream': False, 'options': {'num_ctx': 16384, 'num_gpu': num_gpu}}
             req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
             try:
                 with urllib.request.urlopen(req, timeout=600) as response:
