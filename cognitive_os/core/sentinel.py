@@ -78,10 +78,10 @@ class VRAMSentinel:
                 # Swarm MUST be throttled to 1 to prevent CPU/OS death!
                 return {"chunk_size": 800, "fast_brain_swarm_size": 1}
             elif vram >= ram:
-                # INVERTED ARCHITECTURE: VRAM is huge, but System RAM is the bottleneck.
+                # INVERTED ARCHITECTURE: VRAM is an absolute powerhouse (> System RAM).
                 # Maximize chunk_size (GPU can handle massive contexts).
-                # Throttle swarm_size (Prevent Python multi-threading from crashing the tiny System RAM).
-                return {"chunk_size": 8000, "fast_brain_swarm_size": 2}
+                # MAXIMIZE swarm_size (GPU has infinite CUDA cores, and Python threads take zero RAM overhead).
+                return {"chunk_size": 8000, "fast_brain_swarm_size": 10}
             elif vram > 12000: return {"chunk_size": 6000, "fast_brain_swarm_size": 8}
             elif vram > 6000: return {"chunk_size": 2500, "fast_brain_swarm_size": 4}
             else: return {"chunk_size": 1000, "fast_brain_swarm_size": 2}
