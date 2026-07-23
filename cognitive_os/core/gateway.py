@@ -12,5 +12,6 @@ class GatewayDispatcher:
         Output NOTHING ELSE but the exact tag."""
 
     def route_request(self, prompt):
-        res, t = self.llm.generate(prompt, system=self.gateway_sys)
+        # Brain Stem operates on CPU/NPU to reserve 100% of GPU VRAM for the Motor Cortex (Fast Brain Swarm)
+        res, t = self.llm.generate(prompt, system=self.gateway_sys, use_gpu=False)
         return res, t
