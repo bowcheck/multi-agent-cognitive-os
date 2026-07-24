@@ -20,6 +20,17 @@ def main():
 
     # 1. Initialize OS Core
     llm = LLMProvider(provider=PROVIDER, model=MODEL)
+    
+    print(f"[*] OS Boot: Pinging Local AI ({PROVIDER})...")
+    test_ping, _ = llm.generate("Ping", system="Reply exactly with 'Pong'")
+    if "ERROR:" in test_ping:
+        print(f"\n[!] CRITICAL FATAL: Local AI is offline or unreachable!")
+        print(f"    Error Details: {test_ping}")
+        print(f"    Please ensure '{PROVIDER}' is running (e.g. run `ollama serve`).")
+        print("    Halting OS Boot to prevent pipeline crash.")
+        sys.exit(1)
+    print(f"[*] AI Core Connection: ESTABLISHED.")
+    
     gateway = GatewayDispatcher(llm)
     sentinel = VRAMSentinel()
     stitcher = TCPStitcher()

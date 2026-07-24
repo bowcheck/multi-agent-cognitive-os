@@ -59,44 +59,37 @@ class VRAMSentinel:
         npu_present = self.has_npu()
         apu_present = self.has_integrated_gpu()
         
-        # 1. Apple Silicon (Unified Memory + Neural Engine)
-        if mac_mem != "NOT_MAC":
-            if mac_mem > 32000: return {"chunk_size": 8000, "fast_brain_swarm_size": 10}
-            elif mac_mem > 16000: return {"chunk_size": 4000, "fast_brain_swarm_size": 5}
-            else: return {"chunk_size": 1500, "fast_brain_swarm_size": 2}
+        # 1. Shared Unified Memory Architectures (Apple Silicon, NPUs, APUs)
+        # In these systems, the CPU, GPU, and Neural Engines all physically share the exact same DDR5/LPDDR5 RAM pool.
+        # This means they are highly constrained by memory bus bandwidth, not just capacity!
+        if mac_mem != "NOT_MAC" or npu_present or apu_present:
+            unified_mem = mac_mem if mac_mem != "NOT_MAC" else ram
             
-        # 2. Modern Copilot+ NPUs (Intel/AMD/Snapdragon Neural Processors)
-        elif npu_present:
-            # NPUs are extremely efficient at low-latency parallel tasks. 
-            # We map a high swarm size with moderate chunks.
-            return {"chunk_size": 2000, "fast_brain_swarm_size": 8}
+            c_size = int(max(1200, unified_mem * 0.20)) # NO HARDCAP
+            swarm = int(max(2, unified_mem // 4000)) # NO HARDCAP
+            return {"chunk_size": c_size, "fast_brain_swarm_size": swarm}
             
-        # 3. Traditional Heavy PC (NVIDIA / AMD Discrete GPUs)
+        # 2. Traditional Heterogeneous PC (NVIDIA / AMD Discrete GPUs)
         elif vram != "HARDWARE_NOT_NVIDIA":
             if vram < 2000:
-                # VRAM is dead. Fast Brain evicted to RAM. 
-                # Swarm MUST be throttled to 1 to prevent CPU/OS death!
+                # VRAM is dead. Fast Brain evicted to RAM.
                 return {"chunk_size": 800, "fast_brain_swarm_size": 1}
-            elif vram >= ram:
-                # INVERTED ARCHITECTURE: VRAM is an absolute powerhouse (> System RAM).
-                # Maximize chunk_size (GPU can handle massive contexts).
-                # MAXIMIZE swarm_size (GPU has infinite CUDA cores, and Python threads take zero RAM overhead).
-                return {"chunk_size": 8000, "fast_brain_swarm_size": 10}
-            elif vram > 12000: return {"chunk_size": 6000, "fast_brain_swarm_size": 8}
-            elif vram > 6000: return {"chunk_size": 2500, "fast_brain_swarm_size": 4}
-            else: return {"chunk_size": 1000, "fast_brain_swarm_size": 2}
             
-        # 4. Integrated GPUs / APUs (Shared RAM/VRAM architecture)
-        elif apu_present:
-            # Because the GPU and CPU share the exact same System RAM pool, 
-            # we scale the Swarm based purely on the motherboard's System RAM!
-            if ram > 32000: return {"chunk_size": 6000, "fast_brain_swarm_size": 8}
-            elif ram > 16000: return {"chunk_size": 3000, "fast_brain_swarm_size": 4}
-            else: return {"chunk_size": 1200, "fast_brain_swarm_size": 2}
+            # Chunk size scales linearly with VRAM limit
+            c_size = int(max(1000, vram * 0.5)) # NO HARDCAP
             
-        # 5. Universal Fallback (Pure CPU / RAM - Highly Constrained)
+            if vram >= ram:
+                # INVERTED ARCHITECTURE: VRAM is the powerhouse.
+                swarm = int(max(2, vram // 1200)) # NO HARDCAP
+            else:
+                # NORMAL ARCHITECTURE: Limit swarm to prevent RAM overhead bottlenecks
+                swarm = int(max(2, vram // 1500)) # NO HARDCAP
+                
+            return {"chunk_size": c_size, "fast_brain_swarm_size": swarm}
+            
+        # 3. Universal Fallback (Pure CPU / RAM - Highly Constrained)
         else:
-            return {"chunk_size": 800, "fast_brain_swarm_size": 1}
+            return {"chunk_size": 1200, "fast_brain_swarm_size": 1}
 
     def should_evict_slow_brain(self):
         """
@@ -112,7 +105,12 @@ class VRAMSentinel:
         
         if mac_mem != "NOT_MAC": return False
         if apu_present: return False
-        if npu_present: return False
+        
+        if npu_present:
+            # NPUs are incredible at small, rapid parallel inferencing (Fast Brains).
+            # But they lack the heavy cache architecture needed for massive 16,000+ contexts.
+            # We explicitly evict the Slow Brain to the CPU to keep the NPU dedicated 100% to the Swarm!
+            return True
         
         if vram != "HARDWARE_NOT_NVIDIA":
             # User specifically requested: If VRAM is higher than RAM (reversed) or the same, DO NOT EVICT!
@@ -154,7 +152,7 @@ class VRAMSentinel:
         vram = self.get_free_vram()
         cpu_load = self.get_cpu_load()
         
-        if cpu_load > 8.0:
+        if cpu_load > 15.0:
             return False, "PHYSICAL_CPU_OVERLOADED"
         if ram < 1000:
             return False, "PHYSICAL_RAM_LOW_SLOW_BRAIN_CHOKING"
